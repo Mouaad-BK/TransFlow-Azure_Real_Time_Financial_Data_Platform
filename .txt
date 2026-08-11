@@ -1,2 +1,3 @@
-docker compose --env-file ../.env up -d
+For kafka : docker compose --env-file ../.env up -d
+For Postgre SQL : docker compose --env-file ../../.env up -d
 docker compose --env-file ../.env down

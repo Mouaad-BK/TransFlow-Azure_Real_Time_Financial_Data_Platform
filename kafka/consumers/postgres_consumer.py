@@ -10,8 +10,14 @@ Responsibilities:
 """
 
 import json
+import sys
 
 from consumers.base_consumer import BaseConsumer
+
+# Add project root to the Python path
+sys.path.insert(0, "..")
+
+from azure.adls.bronze_writer import BronzeWriter
 
 # PostgreSQL consumer class that inherits from the base consumer.
 class PostgresConsumer(BaseConsumer):
@@ -45,6 +51,8 @@ class PostgresConsumer(BaseConsumer):
 
     # test with loop
     def run(self):
+
+        bronze_writer = BronzeWriter()
         while True:
             event = self.read_event()
 
@@ -52,7 +60,7 @@ class PostgresConsumer(BaseConsumer):
               continue
 
             # Send the event to the Bronze layer.
-            # bronze_writer.write(event)
+            bronze_writer.write(event)
 
 if __name__ == "__main__":
 

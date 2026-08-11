@@ -39,11 +39,7 @@ class BaseProducer:
         if err is not None:
             print(f"Delivery failed: {err}")
         else:
-            print(
-                f"Message delivered to "
-                f"{msg.topic()} [{msg.partition()}] "
-                f"at offset {msg.offset()}"
-            )
+            print("Delivering messages...")
 
     # Send all pending messages before shutdown.
     def flush(self):
