@@ -1,7 +1,5 @@
 import os
 import json
-from pathlib import Path
-
 from dotenv import load_dotenv
 import stripe
 
@@ -18,10 +16,7 @@ from .generator import (
 # Configuration
 # ==========================================================
 
-
-env_path = Path(__file__).resolve().parents[2] / ".env"
-
-load_dotenv(env_path)
+load_dotenv()
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
@@ -106,4 +101,5 @@ def extract():
 
 if __name__ == "__main__":
 
+    
     print(json.dumps(extract(), indent=4, default=str))
