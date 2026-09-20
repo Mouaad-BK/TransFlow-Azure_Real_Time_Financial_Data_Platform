@@ -179,7 +179,8 @@ def transform_to_silver(df):
         "WA": "Washington",
         "WI": "Wisconsin",
         "WV": "West Virginia",
-        "WY": "Wyoming"
+        "WY": "Wyoming",
+        "AZ": "Arizona"
     }
 
     mapping_expr = F.create_map(

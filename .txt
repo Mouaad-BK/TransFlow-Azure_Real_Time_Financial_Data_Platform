@@ -3,9 +3,41 @@ For Postgre SQL : docker compose --env-file ../../.env up -d
 docker compose --env-file ../.env down
 
 
-==> Stra kafka :
+==> Start kafka :
 --> From "cd kafka" :
 terminal 1 : python -m consumers.postgres_consumer
 terminal 2 : python -m consumers.stripe_consumer
 terminal 3 : python -m producers.postgres_producer
 terminal 4 : python -m producers.stripe_producer
+
+==================================
+
+Page 1 — Overview
+Vue globale :
+- Total transactions
+- Total amount
+- Average amount
+- Success / Failure rate
+- Évolution quotidienne
+
+Page 2 — Transaction & Payment Analysis
+- Analyse temporelle : jour / mois / heure
+- Tendances
+- Montants
+- Successful vs Failed
+- Card usage method
+
+Page 3 — Card & Customer Analysis
+- Card brand / type
+- Card performance
+- Nombre de cartes
+- Age / gender
+- Income / credit score
+- Top customers
+
+Page 4 — Merchant & Geographic Analysis
+- Merchant category
+- Transactions par catégorie
+- State / City
+- Transaction errors
+- Success / Failure par zone/catégorie

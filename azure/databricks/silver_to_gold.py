@@ -2,9 +2,11 @@ from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 from delta.tables import DeltaTable
 
+
 # Define the paths for the Silver and Gold layers in Azure Data Lake Storage (ADLS)
 SILVER_PATH = "abfss://transactions@strtransactions.dfs.core.windows.net/silver/"
 GOLD_PATH = "abfss://transactions@strtransactions.dfs.core.windows.net/gold/"
+
 
 # =============================================================================
 # Read Silver Layer
@@ -19,6 +21,7 @@ def read_silver_stream():
     )
 
     return df_silver
+
 
 # =============================================================================
 # 1. Fact Transformations and Writes
@@ -84,31 +87,46 @@ def transform_fact_transactions(df):
         # Transaction status indicator
         "is_successful",
 
-        # References to related business entities
+        # Customer attributes
         "customer_id",
+        "age",
+        "gender",
+        "annual_income",
+        "credit_score",
+        "number_of_cards",
+
+        # Card attributes
         "card_id",
+        "card_brand",
+        "card_type",
+        "has_chip",
+        "card_limit",
+
+        # Merchant attributes
         "merchant_id",
+        "merchant_city",
+        "merchant_state",
+        "postal_code",
+        "merchant_category_code",
 
         # Additional transaction attributes
         "card_usage_method",
-        "merchant_category_code",
-        "transaction_error",
-        "card_brand",
-        "card_type",
-        "merchant_state",
-        "merchant_city"
+        "transaction_error"
     )
 
     return fact_transactions
 
 
 # -----------------------------------------------------------------------------
-# Merge Fact Transactions into Gold (CORRECTION: Eviter les doublons de l'append)
+# Merge Fact Transactions into Gold 
 # -----------------------------------------------------------------------------
 
 def merge_fact_transactions(batch_df, batch_id):
 
-    window_spec = Window.partitionBy("transaction_id").orderBy(F.col("timestamp").desc())
+    window_spec = Window.partitionBy("transaction_id").orderBy(
+        F.col("timestamp").desc()
+    )
+
     batch_df = (
         batch_df
         .withColumn("rn", F.row_number().over(window_spec))
@@ -148,204 +166,7 @@ def merge_fact_transactions(batch_df, batch_id):
 
 
 # =============================================================================
-# 2. Dimension Transformations and Writes
-# =============================================================================
-
-# -----------------------------------------------------------------------------
-# Transform Customer Dimension
-# -----------------------------------------------------------------------------
-
-def transform_dim_customer(df):
-
-    return (
-        df
-        .select(
-            "customer_id",
-            "age",
-            "gender",
-            "annual_income",
-            "credit_score",
-            "number_of_cards",
-            "timestamp"
-        )
-    )
-
-
-# -----------------------------------------------------------------------------
-# Merge Customer Dimension into Gold
-# -----------------------------------------------------------------------------
-
-def merge_dim_customer(batch_df, batch_id):
-
-    window_spec = Window.partitionBy("customer_id").orderBy(F.col("timestamp").desc())
-    batch_df = (
-        batch_df
-        .withColumn("rn", F.row_number().over(window_spec))
-        .filter(F.col("rn") == 1)
-        .drop("rn")
-    )
-
-    target_path = GOLD_PATH + "dim_customer/"
-
-    # Create the Delta table on the first execution
-    if not DeltaTable.isDeltaTable(spark, target_path):
-
-        (
-            batch_df.write
-            .format("delta")
-            .mode("overwrite")
-            .save(target_path)
-        )
-
-    else:
-
-        delta_table = DeltaTable.forPath(
-            spark,
-            target_path
-        )
-
-        (
-            delta_table.alias("target")
-            .merge(
-                batch_df.alias("source"),
-                "target.customer_id = source.customer_id"
-            )
-            .whenMatchedUpdateAll()
-            .whenNotMatchedInsertAll()
-            .execute()
-        )
-
-
-# -----------------------------------------------------------------------------
-# Transform Card Dimension
-# -----------------------------------------------------------------------------
-
-def transform_dim_card(df):
-
-    return (
-        df
-        .select(
-            "card_id",
-            "card_brand",
-            "card_type",
-            "has_chip",
-            "card_limit",
-            "timestamp"
-        )
-    )
-
-
-# -----------------------------------------------------------------------------
-# Merge Card Dimension into Gold
-# -----------------------------------------------------------------------------
-
-def merge_dim_card(batch_df, batch_id):
-
-    window_spec = Window.partitionBy("card_id").orderBy(F.col("timestamp").desc())
-    batch_df = (
-        batch_df
-        .withColumn("rn", F.row_number().over(window_spec))
-        .filter(F.col("rn") == 1)
-        .drop("rn")
-    )
-
-    target_path = GOLD_PATH + "dim_card/"
-
-    # Create the Delta table on the first execution
-    if not DeltaTable.isDeltaTable(spark, target_path):
-
-        (
-            batch_df.write
-            .format("delta")
-            .mode("overwrite")
-            .save(target_path)
-        )
-
-    else:
-
-        delta_table = DeltaTable.forPath(
-            spark,
-            target_path
-        )
-
-        (
-            delta_table.alias("target")
-            .merge(
-                batch_df.alias("source"),
-                "target.card_id = source.card_id"
-            )
-            .whenMatchedUpdateAll()
-            .whenNotMatchedInsertAll()
-            .execute()
-        )
-
-
-# -----------------------------------------------------------------------------
-# Transform Merchant Dimension
-# -----------------------------------------------------------------------------
-
-def transform_dim_merchant(df):
-
-    return (
-        df
-        .select(
-            "merchant_id",
-            "merchant_city",
-            "merchant_state",
-            "postal_code",
-            "merchant_category_code",
-            "timestamp"
-        )
-    )
-
-
-# -----------------------------------------------------------------------------
-# Merge Merchant Dimension into Gold
-# -----------------------------------------------------------------------------
-
-def merge_dim_merchant(batch_df, batch_id):
-
-    window_spec = Window.partitionBy("merchant_id").orderBy(F.col("timestamp").desc())
-    batch_df = (
-        batch_df
-        .withColumn("rn", F.row_number().over(window_spec))
-        .filter(F.col("rn") == 1)
-        .drop("rn")
-    )
-
-    target_path = GOLD_PATH + "dim_merchant/"
-
-    # Create the Delta table on the first execution
-    if not DeltaTable.isDeltaTable(spark, target_path):
-
-        (
-            batch_df.write
-            .format("delta")
-            .mode("overwrite")
-            .save(target_path)
-        )
-
-    else:
-
-        delta_table = DeltaTable.forPath(
-            spark,
-            target_path
-        )
-
-        (
-            delta_table.alias("target")
-            .merge(
-                batch_df.alias("source"),
-                "target.merchant_id = source.merchant_id"
-            )
-            .whenMatchedUpdateAll()
-            .whenNotMatchedInsertAll()
-            .execute()
-        )
-
-
-# =============================================================================
-# 3. Summary Transformations and Writes
+# 2. Summary Transformations and Writes
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -632,7 +453,7 @@ def transform_card_usage_method_summary(df):
             # Transaction amount
             F.sum("amount").alias("total_transaction_amount")
         )
-        
+
         # Calculating transaction percentage
         .withColumn(
             "transaction_percentage",
@@ -858,50 +679,89 @@ def write_transaction_error_summary_to_gold(
     )
 
 # =============================================================================
-# CORRECTION: GLOBAL MICRO-BATCH PROCESSOR (Unifies Pipeline)
+# GLOBAL MICRO-BATCH PROCESSOR (Unifies Pipeline)
 # =============================================================================
 
 def process_micro_batch(batch_df, batch_id):
-        
+
+    # Check if the micro-batch is empty to avoid unnecessary processing
+    # ( No new data in the Silver layer )
     if batch_df.isEmpty():
         return
 
-    # 1. Traiter la table de faits
+    # Otherwise, process the micro-batch as usual
+
+    # 1. Process the fact table
     fact_transactions = transform_fact_transactions(batch_df)
     merge_fact_transactions(fact_transactions, batch_id)
 
-    # 2. Traiter les dimensions strictement l'une après l'autre
-    dim_customer = transform_dim_customer(batch_df)
-    merge_dim_customer(dim_customer, batch_id)
-
-    dim_card = transform_dim_card(batch_df)
-    merge_dim_card(dim_card, batch_id)
-
-    dim_merchant = transform_dim_merchant(batch_df)
-    merge_dim_merchant(dim_merchant, batch_id)
-
-    # 3. Traiter les résumés à partir de la table de faits mise à jour
+    # 2. Process the summaries from the updated fact table
     fact_transactions_gold = (
         spark.read
         .format("delta")
         .load(GOLD_PATH + "fact_transactions/")
     )
 
-    (daily_amount_summary, monthly_amount_summary) = transform_amount_summary(fact_transactions_gold)
-    (daily_status_summary, monthly_status_summary) = transform_status_summary(fact_transactions_gold)
-    merchant_category_summary = transform_merchant_category_summary(fact_transactions_gold)
-    card_usage_method_summary = transform_card_usage_method_summary(fact_transactions_gold)
-    card_summary = transform_card_summary(fact_transactions_gold)
-    geographic_summary = transform_geographic_summary(fact_transactions_gold)
-    transaction_error_summary = transform_transaction_error_summary(fact_transactions_gold)
+    (
+        daily_amount_summary,
+        monthly_amount_summary
+    ) = transform_amount_summary(fact_transactions_gold)
 
-    write_amount_summaries_to_gold(daily_amount_summary, monthly_amount_summary)
-    write_status_summaries_to_gold(daily_status_summary, monthly_status_summary)
-    write_merchant_category_summary_to_gold(merchant_category_summary)
-    write_card_usage_method_summary_to_gold(card_usage_method_summary)
-    write_card_summary_to_gold(card_summary)
-    write_geographic_summary_to_gold(geographic_summary)
-    write_transaction_error_summary_to_gold(transaction_error_summary)
+    (
+        daily_status_summary,
+        monthly_status_summary
+    ) = transform_status_summary(fact_transactions_gold)
+
+    merchant_category_summary = transform_merchant_category_summary(
+        fact_transactions_gold
+    )
+
+    card_usage_method_summary = transform_card_usage_method_summary(
+        fact_transactions_gold
+    )
+
+    card_summary = transform_card_summary(
+        fact_transactions_gold
+    )
+
+    geographic_summary = transform_geographic_summary(
+        fact_transactions_gold
+    )
+
+    transaction_error_summary = transform_transaction_error_summary(
+        fact_transactions_gold
+    )
+
+    write_amount_summaries_to_gold(
+        daily_amount_summary,
+        monthly_amount_summary
+    )
+
+    write_status_summaries_to_gold(
+        daily_status_summary,
+        monthly_status_summary
+    )
+
+    write_merchant_category_summary_to_gold(
+        merchant_category_summary
+    )
+
+    write_card_usage_method_summary_to_gold(
+        card_usage_method_summary
+    )
+
+    write_card_summary_to_gold(
+        card_summary
+    )
+
+    write_geographic_summary_to_gold(
+        geographic_summary
+    )
+
+    write_transaction_error_summary_to_gold(
+        transaction_error_summary
+    )
+
 
 # =============================================================================
 # Execute Gold Pipeline (CORRECTION: Single Stream Triggered)
@@ -916,7 +776,7 @@ if __name__ == "__main__":
         df_silver.writeStream
         .foreachBatch(process_micro_batch)
         .option(
-            "checkpointLocation", 
+            "checkpointLocation",
             GOLD_PATH + "pipeline/_checkpoints/"
         )
         .trigger(availableNow=True)

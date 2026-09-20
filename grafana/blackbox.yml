@@ -1,0 +1,8 @@
+modules:
+  kafka:
+    prober: tcp
+    timeout: 5s
+
+  airflow:
+    prober: http
+    timeout: 5s

@@ -1,0 +1,13 @@
+Azure Synapse Analytics
+│
+├── Synapse Studio       → Web interface for managing and using Synapse
+│
+├── Serverless SQL Pool  → Runs SQL directly on data stored in ADLS   ← ✅ Used in this project
+│
+├── Dedicated SQL Pool   → Data Warehouse with stored tables and data ( the reel Data Warehouse)
+│
+├── Spark Pool           → Big Data processing with Apache Spark / PySpark
+│
+├── Pipelines            → Data workflow orchestration and automation
+│
+└── Monitoring           → Monitoring queries, pipelines, and resources

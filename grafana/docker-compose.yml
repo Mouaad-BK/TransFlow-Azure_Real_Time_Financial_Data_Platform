@@ -1,0 +1,95 @@
+services:
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: kafka-exporter
+    command:
+      - --kafka.server=broker-1:9092
+      - --kafka.server=broker-2:9092
+      - --kafka.server=broker-3:9092
+    ports:
+      - "9308:9308"
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - kafka-network
+  
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./blackbox.yml:/etc/blackbox_exporter/config.yml
+    restart: unless-stopped
+    networks:
+      - monitoring-network
+      - kafka-network
+      - airflow_default
+
+  airflow-exporter:
+    image: apache/airflow:3.3.2
+    container_name: airflow-exporter
+    command: python /exporter/airflow_exporter.py
+    volumes:
+      - ./exporter:/exporter
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    networks:
+      - monitoring-network
+      - airflow_default
+    ports:
+      - "9101:9101"
+    restart: unless-stopped
+
+  synapse-exporter:
+    build:
+      context: ./exporter
+    container_name: synapse-exporter
+    volumes:
+      - ./exporter:/exporter
+    ports:
+      - "9102:9102"
+    networks:
+      - monitoring-network
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  monitoring-network:
+
+  kafka-network:
+    external: true
+    name: kafka-network
+  
+  airflow_default:
+    external: true
+    name: airflow_default

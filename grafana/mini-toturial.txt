@@ -1,0 +1,294 @@
+GRAFANA — MINI TUTORIAL
+=======================
+
+OBJECTIF
+--------
+Mettre en place un monitoring simple avec :
+
+Source à monitorer
+       ↓
+Exporter (si nécessaire)
+       ↓
+Prometheus
+       ↓
+Grafana
+       ↓
+Dashboard
+
+
+1. PRÉPARER LE DOSSIER
+----------------------
+
+Créer une structure simple :
+
+grafana/
+├── docker-compose.yml
+├── prometheus/
+│   └── prometheus.yml
+└── dashboards/
+
+Rôle :
+- docker-compose.yml → lance les composants du monitoring.
+- prometheus.yml → configure Prometheus.
+- dashboards/ → contient les dashboards Grafana.
+
+
+2. AJOUTER LES SERVICES DANS docker-compose.yml
+------------------------------------------------
+
+Les composants principaux sont :
+
+- Prometheus → collecte et stocke les métriques.
+- Grafana → visualise les métriques.
+
+Exemple :
+
+services:
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+
+
+3. PRÉPARER PROMETHEUS
+----------------------
+
+Fichier :
+
+prometheus/prometheus.yml
+
+Prometheus doit savoir quelles sources il doit surveiller.
+
+Exemple :
+
+scrape_configs:
+
+  - job_name: "source"
+    static_configs:
+      - targets: ["source:PORT"]
+
+
+4. CONNECTER LA SOURCE À PROMETHEUS
+------------------------------------
+
+Il existe deux possibilités.
+
+A. La source expose directement des métriques Prometheus :
+
+Source
+  ↓
+Prometheus
+
+B. La source ne comprend pas le format Prometheus :
+
+Source
+  ↓
+Exporter
+  ↓
+Prometheus
+
+Un Exporter est donc un petit service qui récupère les
+métriques d'une application et les expose dans un format
+que Prometheus peut lire.
+
+
+5. AJOUTER L'EXPORTER SI NÉCESSAIRE
+-----------------------------------
+
+L'Exporter peut être ajouté dans docker-compose.yml.
+
+Exemple :
+
+exporter:
+  image: exporter-image
+  ports:
+    - "PORT:PORT"
+
+Puis Prometheus pointe vers :
+
+exporter:PORT
+
+
+6. DÉMARRER LES SERVICES
+------------------------
+
+Depuis le dossier contenant docker-compose.yml :
+
+docker compose up -d
+
+Vérifier :
+
+docker ps
+
+Les services doivent être UP.
+
+
+7. VÉRIFIER PROMETHEUS
+----------------------
+
+Ouvrir :
+
+http://localhost:9090
+
+Puis vérifier :
+
+Status → Targets
+
+La source doit apparaître :
+
+source    UP
+
+Cela signifie que Prometheus récupère correctement
+les métriques.
+
+
+8. CONNECTER GRAFANA À PROMETHEUS
+----------------------------------
+
+Dans Grafana :
+
+Connections
+→ Data sources
+→ Add data source
+→ Prometheus
+
+URL :
+
+http://prometheus:9090
+
+Puis :
+
+Save & Test
+
+Grafana utilise maintenant Prometheus comme source de données.
+
+
+9. TESTER LES MÉTRIQUES DANS GRAFANA
+-------------------------------------
+
+Avant de créer le dashboard :
+
+Dashboards
+→ New
+→ Add visualization
+
+Sélectionner :
+
+Prometheus
+
+Tester une métrique existante.
+
+Si elle retourne des données :
+
+Source
+  ↓
+Exporter (si nécessaire)
+  ↓
+Prometheus
+  ↓
+Grafana
+
+est fonctionnel.
+
+
+10. CRÉER LE DASHBOARD
+----------------------
+
+Créer :
+
+Dashboards
+→ New
+→ New dashboard
+→ Add visualization
+
+Chaque visualization est un PANEL.
+
+Exemples de panels :
+
+- Status
+- CPU
+- Memory
+- Throughput
+- Errors
+- Latency
+- Messages
+- Consumer lag
+
+
+11. ORGANISER LE DASHBOARD
+--------------------------
+
+Un dashboard peut contenir plusieurs panels :
+
++---------------------------------------+
+|           PLATFORM MONITORING         |
++----------------+----------------------+
+| Status         | Errors               |
++----------------+----------------------+
+| Throughput     | Latency              |
++----------------+----------------------+
+| Messages / Metrics                    |
++---------------------------------------+
+
+
+12. FLUX COMPLET
+----------------
+
+La logique à retenir est :
+
+SOURCE
+  │
+  │ métriques
+  ▼
+EXPORTER
+  │
+  │ format Prometheus
+  ▼
+PROMETHEUS
+  │
+  │ requêtes
+  ▼
+GRAFANA
+  │
+  ▼
+DASHBOARD
+
+
+RÔLE DE CHAQUE COMPOSANT
+-------------------------
+
+Source
+→ produit les données techniques.
+
+Exporter
+→ traduit/expose les métriques si nécessaire.
+
+Prometheus
+→ collecte et stocke les métriques.
+
+Grafana
+→ visualise les métriques et construit les dashboards.
+
+Dashboard
+→ regroupe les panels permettant de surveiller le système.
+
+
+ORDRE À RETENIR
+---------------
+
+1. Préparer docker-compose.yml
+2. Préparer prometheus.yml
+3. Ajouter les exporters nécessaires
+4. Démarrer les services
+5. Vérifier les Targets dans Prometheus
+6. Connecter Prometheus à Grafana
+7. Tester les métriques
+8. Créer le dashboard
+9. Ajouter les panels
+10. Vérifier le monitoring
