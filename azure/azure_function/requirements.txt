@@ -1,0 +1,8 @@
+azure-functions
+azure-storage-file-datalake
+deltalake[pyarrow]
+joblib
+pandas
+numpy
+scikit-learn
+reportlab

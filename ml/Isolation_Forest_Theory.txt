@@ -1,0 +1,249 @@
+ISOLATION FOREST — THEORY
+Real-Time Financial Data Platform / Anomaly Detection
+
+1. WHAT IS ISOLATION FOREST?
+
+Isolation Forest (iForest) is an unsupervised Machine Learning algorithm used mainly for anomaly and outlier detection.
+
+It is suitable for our project because we do not have reliable fraud/normal labels.
+
+Main idea:
+Anomalies are usually easier to isolate than normal observations.
+
+2. WHICH FAMILY DOES IT BELONG TO?
+
+Machine Learning
+    -> Unsupervised Learning
+        -> Anomaly Detection
+            -> Tree-based methods
+
+Isolation Forest uses random decision trees, but unlike a Random Forest classifier, its goal is not classification. Its goal is to isolate unusual observations.
+
+Random Forest:
+- Supervised
+- Requires labels
+- Predicts classes or values
+
+Isolation Forest:
+- Unsupervised
+- Does not require labels
+- Detects anomalies
+
+3. HOW DOES IT WORK?
+
+Suppose we have transaction amounts:
+
+10, 15, 20, 25, 30, 35, 40, 50, 60, 500000
+
+500000 is very different from the other values.
+
+Isolation Forest creates random splits. For example:
+
+amount < 250000?
+    YES -> normal values
+    NO  -> 500000
+
+The value 500000 is isolated very quickly.
+
+A normal observation usually needs more splits before it is isolated.
+
+Therefore:
+
+Short path -> likely anomaly
+Long path  -> likely normal
+
+The algorithm repeats this process across many random trees.
+
+4. WHY "FOREST"?
+
+Isolation Forest does not use a single tree.
+
+It builds many random trees:
+
+Tree 1
+Tree 2
+Tree 3
+...
+Tree N
+
+The results from all trees are combined to determine how easy it is to isolate each observation.
+
+5. ANOMALY SCORE
+
+For each transaction, the model evaluates how easily it can be isolated.
+
+Conceptually:
+
+Short path -> more unusual
+Long path  -> more normal
+
+In scikit-learn:
+
+model.predict(X)
+
+returns:
+
+ 1  -> normal
+-1  -> anomaly
+
+model.decision_function(X)
+
+returns a continuous anomaly-related score.
+
+6. CONTAMINATION
+
+contamination represents the expected proportion of anomalies in the dataset.
+
+Example:
+
+contamination = 0.01
+
+This corresponds to approximately 1% of observations being considered anomalies by the model's thresholding process.
+
+Important:
+This does NOT mean that those observations are confirmed fraud.
+
+It mainly helps determine the decision threshold.
+
+7. ADVANTAGES
+
+- Does not require labeled data.
+- Suitable when anomalies are rare.
+- Can work with many numerical features.
+- Relatively efficient on large datasets.
+- Does not require assuming that the data follows a normal distribution.
+- Based on a simple and intuitive idea: unusual observations are easier to isolate.
+
+8. LIMITATIONS
+
+Anomaly does not automatically mean fraud.
+
+Isolation Forest detects unusual transactions, not confirmed fraudulent transactions.
+
+For example:
+
+A very large legitimate transaction may be detected as anomalous simply because it is rare.
+
+Other limitations:
+- Results depend on the quality of the features.
+- Poor preprocessing can affect anomaly detection.
+- contamination must be chosen carefully.
+- Individual predictions are not always easy to explain.
+
+9. HOW TO EVALUATE ISOLATION FOREST?
+
+Because we do not have reliable labels, we cannot honestly calculate a standard classification accuracy.
+
+Without labels, we should not claim:
+
+"Accuracy = 95%"
+
+because there is no reliable ground truth.
+
+Instead, we can evaluate the model through:
+
+A. Anomaly proportion
+Check how many transactions are classified as anomalies.
+
+Example:
+201,418 transactions
+-> 2,014 anomalies
+-> approximately 1%
+
+B. Inspection of anomalous transactions
+Examine the transactions with the strongest anomaly scores and their features:
+
+- amount
+- credit_score
+- credit_limit
+- transaction_error
+- merchant_region
+- etc.
+
+C. Business validation
+Check whether detected transactions have genuinely unusual characteristics.
+
+Example:
+Very high amount
++
+transaction error
++
+unusual customer/merchant behavior
+
+This may be worth investigation.
+
+However:
+
+High amount
++
+high customer income
++
+otherwise consistent behavior
+
+may be completely legitimate.
+
+D. Future labeled data
+If confirmed fraud/normal labels become available later, standard classification metrics can be used:
+
+- Precision
+- Recall
+- F1-score
+- PR-AUC
+- ROC-AUC
+
+For rare fraud/anomaly problems, Precision, Recall and PR-AUC are generally more informative than accuracy.
+
+10. OUR PROJECT ARCHITECTURE
+
+201k training transactions
+        |
+        v
+Preprocessing
+        |
+        v
+36 numerical features
+        |
+        v
+Isolation Forest
+        |
+        v
+Anomaly Score
+        |
+        v
+Decision Threshold
+        |
+        v
+is_anomaly
+        |
+        v
+Azure Function
+        |
+        v
+PDF Report
+
+Important distinction:
+
+Isolation Forest
+    -> unusual transaction
+
+is NOT the same as:
+
+Isolation Forest
+    -> confirmed fraud
+
+11. SUMMARY
+
+Property                  Isolation Forest
+------------------------------------------------
+Type                      Machine Learning
+Learning                  Unsupervised
+Goal                      Anomaly detection
+Labels required           No
+Main principle            Isolate observations
+Anomaly                   Short isolation path
+Important parameter       contamination
+Output                    Anomaly score + prediction
+Accuracy without labels   Not meaningful
+Evaluation without labels Score analysis + business validation
+Fraud detection           Not directly
+Suitable for our project  Yes, given the lack of reliable labels
