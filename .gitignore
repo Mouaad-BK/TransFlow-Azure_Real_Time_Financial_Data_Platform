@@ -9,10 +9,11 @@ __pycache__/
 
 # Environment variables
 .env
+.env.*
 
 # IDE
-
 .idea/
+.vscode/
 
 # OS
 .DS_Store
@@ -20,4 +21,9 @@ Thumbs.db
 
 # Logs
 *.log
-.databricks
+
+# Databricks
+.databricks/
+
+# Airflow logs
+airflow/logs/
